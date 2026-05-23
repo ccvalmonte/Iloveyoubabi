@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hug Baby Simulator</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    height:100vh;
+    overflow:hidden;
+    background:#d9e4d1;
+    font-family:monospace;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    color:#4d5b46;
+
+    /* mobile tap feel */
+    touch-action:manipulation;
+}
+
+h1{
+    margin-bottom:15px;
+    color:#5f7358;
+    font-size:32px;
+    letter-spacing:2px;
+    text-align:center;
+}
+
+#gameBox{
+    position:relative;
+    width:520px;
+    max-width:95vw;
+    height:580px;
+    background:#efe7da;
+    border:5px solid #75856f;
+    border-radius:20px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    overflow:hidden;
+    box-shadow:0px 10px 30px rgba(0,0,0,0.15);
+
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-touch-callout:none;
+}
+
+#sprite{
+    width:280px;
+    max-width:70vw;
+    transition:transform 0.1s;
+    pointer-events:none;
+}
+
+.hug{
+    transform:scale(1.06);
+}
+
+.overload{
+    animation:shake 0.2s infinite;
+}
+
+@keyframes shake{
+    0%{transform:translate(0px,0px);}
+    25%{transform:translate(3px,-3px);}
+    50%{transform:translate(-3px,3px);}
+    75%{transform:translate(3px,3px);}
+    100%{transform:translate(-3px,-3px);}
+}
+
+#counter{
+    margin-top:15px;
+    font-size:26px;
+    color:#55624d;
+}
+
+#combo{
+    margin-top:5px;
+    font-size:20px;
+    color:#7c8d72;
+}
+
+#messageBox{
+    margin-top:18px;
+    background:#dce8d2;
+    padding:12px 22px;
+    border-radius:14px;
+    border:3px solid #7d9176;
+    min-width:260px;
+    text-align:center;
+    min-height:60px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+#message{
+    font-size:22px;
+    color:#4d5b46;
+}
+
+#achievement{
+    margin-top:15px;
+    font-size:17px;
+    color:#7a6448;
+    font-weight:bold;
+    text-align:center;
+    padding:0 10px;
+}
+
+.heart{
+    position:absolute;
+    font-size:28px;
+    animation:floatUp 1s linear forwards;
+    pointer-events:none;
+}
+
+@keyframes floatUp{
+    from{
+        opacity:1;
+        transform:translateY(0);
+    }
+    to{
+        opacity:0;
+        transform:translateY(-120px);
+    }
+}
+
+#overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    opacity:0;
+    pointer-events:none;
+    transition:0.6s;
+    padding:20px;
+    text-align:center;
+}
+
+#finalText{
+    color:white;
+    font-size:20px;
+    line-height:1.6;
+    text-shadow:2px 2px 10px rgba(0,0,0,0.7);
+}
+
+.instructions{
+    margin-top:12px;
+    color:#5f7358;
+    text-align:center;
+    padding:0 20px;
+}
+
+@media (max-width:600px){
+
+    h1{
+        font-size:24px;
+    }
+
+    #gameBox{
+        height:75vh;
+    }
+
+    #counter{
+        font-size:22px;
+    }
+
+    #combo{
+        font-size:18px;
+    }
+
+    #message{
+        font-size:18px;
+    }
+
+    #finalText{
+        font-size:18px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>SPACE / TAP TO HUG BABY</h1>
+
+<div id="gameBox">
+
+    <img id="sprite" src="idle.png">
+
+    <div id="counter">Hugs: 0</div>
+    <div id="combo">Combo x0</div>
+
+    <div id="messageBox">
+        <div id="message">tap or space !!!</div>
+    </div>
+
+    <div id="achievement"></div>
+
+    <div id="overlay">
+        <div id="finalText"></div>
+    </div>
+
+</div>
+
+<div class="instructions">
+    spam tap or space for maximum affection
+</div>
+
+<audio id="bgMusic" loop>
+    <source src="bgm.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="hugSound">
+    <source src="hug.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+
+let hugs = 0;
+let combo = 0;
+let lastPress = 0;
+
+let gameFrozen = false;
+let inMonthsary = false;
+let monthsaryShown = false;
+
+const sprite = document.getElementById("sprite");
+const counter = document.getElementById("counter");
+const comboText = document.getElementById("combo");
+const message = document.getElementById("message");
+const achievement = document.getElementById("achievement");
+const gameBox = document.getElementById("gameBox");
+
+const bgMusic = document.getElementById("bgMusic");
+const hugSound = document.getElementById("hugSound");
+
+const extraMessages = [
+    "mwah",
+    ":33",
+    ":]]",
+    "hugggggs",
+    "cuddlee paa"
+];
+
+// unlock audio on first interaction
+function startAudio(){
+    bgMusic.play().catch(()=>{});
+}
+
+document.body.addEventListener("touchstart", startAudio, {once:true});
+document.body.addEventListener("click", startAudio, {once:true});
+
+// MAIN HUG FUNCTION
+function doHug(){
+
+    if(inMonthsary){
+        resetGame();
+        return;
+    }
+
+    if(gameFrozen) return;
+
+    hugs++;
+    counter.textContent = `Hugs: ${hugs}`;
+
+    // combo
+    let now = Date.now();
+
+    if(now - lastPress < 700){
+        combo++;
+    }else{
+        combo = 1;
+    }
+
+    lastPress = now;
+
+    comboText.textContent = `Combo x${combo}`;
+
+    // sprite animation
+    sprite.src = "hug.png";
+    sprite.classList.add("hug");
+
+    setTimeout(()=>{
+        sprite.src = "idle.png";
+        sprite.classList.remove("hug");
+    },200);
+
+    // messages
+    if(hugs === 1){
+        message.textContent = Math.random()<0.5 ? "luh baby" : "hi baby";
+    }
+    else if(hugs === 2){
+        message.textContent = "crush mo talaga ako";
+    }
+    else if(hugs === 3){
+        message.textContent = "gimme kiss gimme kiss";
+    }
+    else{
+        message.textContent = extraMessages[
+            Math.floor(Math.random()*extraMessages.length)
+        ];
+    }
+
+    // sound
+    hugSound.currentTime = 0;
+    hugSound.play().catch(()=>{});
+
+    createHeart();
+
+    // achievements
+    if(hugs === 10){
+        achievement.textContent =
+        "Achievement Unlocked: clingy 💚";
+    }
+
+    if(hugs === 50){
+        achievement.textContent =
+        "Achievement Unlocked: touch starved 💚";
+    }
+
+    if(hugs === 100){
+        achievement.textContent =
+        "Achievement Unlocked: affection overload 💚";
+    }
+
+    // monthsary scene
+    if(hugs === 167 && !monthsaryShown){
+        monthsaryShown = true;
+        startMonthsary();
+    }
+}
+
+// keyboard support
+document.addEventListener("keydown",(event)=>{
+
+    if(event.code !== "Space") return;
+
+    event.preventDefault();
+    doHug();
+});
+
+// touch support
+gameBox.addEventListener("touchstart",(e)=>{
+    e.preventDefault();
+    doHug();
+});
+
+// mouse support
+gameBox.addEventListener("click",()=>{
+    doHug();
+});
+
+function createHeart(){
+
+    const heart = document.createElement("div");
+    heart.classList.add("heart");
+
+    const arr = ["💚","🤍","🌱","💌"];
+
+    heart.textContent =
+    arr[Math.floor(Math.random()*arr.length)];
+
+    heart.style.left =
+    Math.random()*460 + "px";
+
+    heart.style.top =
+    Math.random()*350 + "px";
+
+    gameBox.appendChild(heart);
+
+    setTimeout(()=>{
+        heart.remove();
+    },1000);
+}
+
+// MONTHSARY SCENE
+function startMonthsary(){
+
+    inMonthsary = true;
+    gameFrozen = true;
+
+    const overlay = document.getElementById("overlay");
+    const finalText = document.getElementById("finalText");
+
+    overlay.style.opacity = 1;
+    overlay.style.background = "rgba(0,0,0,0.35)";
+
+    sprite.src = "hug.png";
+
+    const lines = [
+        "167 hugs ahh HAHAHAHA 💚",
+        "crush na crush mo talaga ako :))",
+        "happy monthsary baby",
+        "we have been thru so much na",
+        "im here for you always :]]",
+        "i love you very much :33",
+        "tap or press SPACE for more hugs HAHAHH"
+    ];
+
+    let i = 0;
+
+    function typeLine(){
+
+        if(i >= lines.length){
+            gameFrozen = true;
+            return;
+        }
+
+        typeWriter(lines[i], finalText, ()=>{
+
+            setTimeout(()=>{
+                i++;
+                typeLine();
+            },1200);
+
+        });
+    }
+
+    typeLine();
+}
+
+function typeWriter(text, el, cb){
+
+    el.textContent = "";
+
+    let i = 0;
+
+    let interval = setInterval(()=>{
+
+        el.textContent += text[i];
+        i++;
+
+        if(i >= text.length){
+            clearInterval(interval);
+            cb();
+        }
+
+    },40);
+}
+
+// RESET GAME
+function resetGame(){
+
+    inMonthsary = false;
+    gameFrozen = false;
+
+    hugs = 0;
+    combo = 0;
+    lastPress = 0;
+
+    counter.textContent = "Hugs: 0";
+    comboText.textContent = "Combo x0";
+    message.textContent = "tap or space !!!";
+    achievement.textContent = "";
+
+    sprite.src = "idle.png";
+
+    const overlay = document.getElementById("overlay");
+    overlay.style.opacity = 0;
+}
+
+</script>
+
+</body>
+</html>
